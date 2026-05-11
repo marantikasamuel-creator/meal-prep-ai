@@ -109,14 +109,23 @@ export function ChatMessage({ message, onSaveRecipe, savedRecipes = [] }: ChatMe
       )}
       <div
         className={cn(
-          "max-w-[85%] rounded-[24px] px-5 py-4 shadow-sm text-sm sm:text-base selection:bg-emerald-500/30 transition-colors duration-300",
+          "max-w-[90%] sm:max-w-[80%] rounded-[24px] px-4 py-3 sm:px-5 sm:py-4 shadow-sm text-sm sm:text-base selection:bg-emerald-500/30 transition-colors duration-300",
           isUser
             ? "bg-emerald-600 text-white rounded-tr-sm"
             : "bg-[#F9FAFB] dark:bg-gray-800 text-gray-800 dark:text-white rounded-tl-sm border border-gray-100 dark:border-gray-700"
         )}
       >
         {isUser ? (
-          <div className="whitespace-pre-wrap font-medium">{message.content}</div>
+          <div className="flex flex-col gap-2">
+            {message.imageBase64 && (
+               <img 
+                 src={message.imageBase64.startsWith('data:') ? message.imageBase64 : `data:image/jpeg;base64,${message.imageBase64}`} 
+                 alt="Uploaded ingredient" 
+                 className="w-full max-w-[240px] rounded-xl object-cover border-2 border-emerald-400"
+               />
+            )}
+            <div className="whitespace-pre-wrap font-medium">{message.content}</div>
+          </div>
         ) : (
           renderContent(message.content)
         )}

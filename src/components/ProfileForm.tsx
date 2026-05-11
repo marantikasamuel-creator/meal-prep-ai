@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { UserProfile } from "../types";
-import { X } from "lucide-react";
+import { X, Target, Wallet, Activity, GraduationCap, Utensils, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { cn } from "../lib/utils";
 
 interface ProfileFormProps {
   initialProfile: UserProfile | null;
@@ -11,14 +13,14 @@ interface ProfileFormProps {
 export function ProfileForm({ initialProfile, onSave, onClose }: ProfileFormProps) {
   const [profile, setProfile] = useState<UserProfile>(
     initialProfile || {
-      goal: "",
+      goal: "maintain",
       calories_target: 2000,
       allergies: [],
       daily_budget_idr: 50000,
       taste_preferences: [],
       disliked_foods: [],
-      activity_level: "",
-      cooking_skill: "",
+      activity_level: "moderate",
+      cooking_skill: "intermediate",
       available_time_minutes: 30,
     }
   );
@@ -30,210 +32,248 @@ export function ProfileForm({ initialProfile, onSave, onClose }: ProfileFormProp
     setProfile((prev) => ({ ...prev, [field]: value }));
   };
 
-  const togglePreference = (pref: string) => {
-    if (profile.taste_preferences.includes(pref)) {
-      handleChange(
-        "taste_preferences",
-        profile.taste_preferences.filter((p) => p !== pref)
-      );
-    } else {
-      handleChange("taste_preferences", [...profile.taste_preferences, pref]);
-    }
-  };
-
-  const handleAllergyAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && allergyInput.trim()) {
-      e.preventDefault();
-      if (!profile.allergies.includes(allergyInput.trim())) {
-        handleChange("allergies", [...profile.allergies, allergyInput.trim()]);
-      }
-      setAllergyInput("");
-    }
-  };
-
-  const handleDislikeAdd = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && dislikeInput.trim()) {
-      e.preventDefault();
-      if (!profile.disliked_foods.includes(dislikeInput.trim())) {
-        handleChange("disliked_foods", [...profile.disliked_foods, dislikeInput.trim()]);
-      }
-      setDislikeInput("");
-    }
-  };
+  const goals = [
+    { value: 'diet', label: 'Weight Loss', icon: '📉', desc: 'Fokus bakar lemak' },
+    { value: 'bulking', label: 'Muscle Gain', icon: '💪', desc: 'Tambah massa otot' },
+    { value: 'maintain', label: 'Maintain', icon: '⚖️', desc: 'Jaga berat badan' },
+  ];
 
   const tasteOptions = ["pedas", "gurih", "manis", "creamy", "asian", "western"];
 
+  const handleAddTag = (field: "allergies" | "disliked_foods", value: string) => {
+    if (value.trim() && !profile[field].includes(value.trim())) {
+      handleChange(field, [...profile[field], value.trim()]);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4 transition-colors duration-300">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-t-[32px] sm:rounded-[32px] max-h-[90vh] flex flex-col shadow-xl border border-gray-100 dark:border-gray-800 transition-colors duration-300">
-        <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-900 sticky top-0 rounded-t-[32px] z-10 transition-colors duration-300">
+    <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <motion.div 
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-t-[32px] sm:rounded-[32px] max-h-[90vh] flex flex-col shadow-2xl border border-white dark:border-gray-800 overflow-hidden"
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-stone-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-gray-900 z-10">
           <div>
-            <h2 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">🎯 Your Goals & Profile</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Help me tailor the best meals for you!</p>
+            <h2 className="font-heading font-black text-2xl text-stone-900 dark:text-white">Profile Nutrisi</h2>
+            <p className="text-xs text-stone-400 dark:text-gray-500 font-bold uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+              <CheckCircle2 size={12} className="text-emerald-500" /> Disiapkan Khusus Buat Lo
+            </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors">
-            <X size={20} className="text-gray-500" />
+          <button onClick={onClose} className="p-2 hover:bg-stone-50 dark:hover:bg-gray-800 rounded-2xl transition-colors">
+            <X size={20} className="text-stone-400" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
-          {/* Goal */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Goal</label>
-            <div className="grid grid-cols-3 gap-2">
-              {["diet", "bulking", "maintain"].map((g) => (
+        {/* Form Content */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-8 no-scrollbar bg-stone-50/30 dark:bg-gray-950/30">
+          {/* Target Goal */}
+          <section>
+            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500 mb-4">
+              <Target size={14} className="text-emerald-500" /> Target Utama
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {goals.map((g) => (
                 <button
-                  key={g}
-                  onClick={() => handleChange("goal", g)}
-                  className={"py-3 px-3 rounded-2xl border text-sm font-bold transition-all " +
-                    (profile.goal === g
-                      ? "bg-emerald-50 dark:bg-emerald-500/20 border-emerald-500 dark:border-emerald-500/50 text-emerald-700 dark:text-emerald-400 shadow-sm"
-                      : "bg-[#F9FAFB] dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                    )}
+                  key={g.value}
+                  onClick={() => handleChange("goal", g.value)}
+                  className={cn(
+                    "p-4 rounded-[20px] text-left border-2 transition-all group flex flex-col items-center sm:items-start text-center sm:text-left",
+                    profile.goal === g.value
+                      ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500 shadow-lg shadow-emerald-500/10"
+                      : "bg-white dark:bg-gray-800 border-stone-100 dark:border-gray-800 hover:border-emerald-200"
+                  )}
                 >
-                  {g.charAt(0).toUpperCase() + g.slice(1)}
+                  <span className="text-2xl mb-2 grayscale group-hover:grayscale-0 transition-all block">{g.icon}</span>
+                  <span className={cn("text-sm font-black font-heading mb-1", profile.goal === g.value ? "text-emerald-700 dark:text-emerald-400" : "text-stone-700 dark:text-gray-300")}>
+                    {g.label}
+                  </span>
+                  <span className="text-[10px] text-stone-400 font-medium leading-tight">{g.desc}</span>
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
+          {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Calories</label>
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500">
+                🔥 Target Kalori
+              </label>
               <input
                 type="number"
                 value={profile.calories_target}
                 onChange={(e) => handleChange("calories_target", Number(e.target.value))}
-                className="w-full bg-[#F3F4F6] dark:bg-gray-800 border border-transparent rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-white outline-none transition-all font-medium"
+                className="w-full bg-white dark:bg-gray-800 border-2 border-stone-100 dark:border-gray-800 rounded-2xl px-4 py-3 text-sm font-bold focus:border-emerald-500 outline-none transition-all shadow-sm"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Daily Budget (Rp)</label>
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500">
+                💰 Budget Harian (Rp)
+              </label>
               <input
                 type="number"
                 value={profile.daily_budget_idr}
                 onChange={(e) => handleChange("daily_budget_idr", Number(e.target.value))}
-                className="w-full bg-[#F3F4F6] dark:bg-gray-800 border border-transparent rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-white outline-none transition-all font-medium"
+                className="w-full bg-white dark:bg-gray-800 border-2 border-stone-100 dark:border-gray-800 rounded-2xl px-4 py-3 text-sm font-bold focus:border-emerald-500 outline-none transition-all shadow-sm"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Taste Preferences</label>
+          {/* Taste Preferences */}
+          <section>
+            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500 mb-3">
+              <Utensils size={14} className="text-emerald-500" /> Selera Makan
+            </label>
             <div className="flex flex-wrap gap-2">
               {tasteOptions.map((taste) => (
                 <button
                   key={taste}
-                  onClick={() => togglePreference(taste)}
-                  className={"py-2 px-4 rounded-full border text-xs font-bold transition-all " +
-                    (profile.taste_preferences.includes(taste)
-                      ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
-                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                    )}
+                  onClick={() => {
+                    const exists = profile.taste_preferences.includes(taste);
+                    handleChange("taste_preferences", exists 
+                      ? profile.taste_preferences.filter(t => t !== taste)
+                      : [...profile.taste_preferences, taste]
+                    );
+                  }}
+                  className={cn(
+                    "px-4 py-2 rounded-full border-2 text-xs font-bold transition-all",
+                    profile.taste_preferences.includes(taste)
+                      ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                      : "bg-white dark:bg-gray-800 border-stone-100 dark:border-gray-800 hover:border-emerald-200 text-stone-600 dark:text-gray-400"
+                  )}
                 >
                   {taste}
                 </button>
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Allergies (Press Enter)</label>
-            <input
-              type="text"
-              value={allergyInput}
-              onChange={(e) => setAllergyInput(e.target.value)}
-              onKeyDown={handleAllergyAdd}
-              placeholder="e.g. dairy, nuts..."
-              className="w-full bg-[#F3F4F6] dark:bg-gray-800 border border-transparent rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-white outline-none transition-all font-medium mb-2"
-            />
-            {profile.allergies.length > 0 && (
+          {/* Allergies & Dislikes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500">
+                🚫 Alergi
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={allergyInput}
+                  onChange={(e) => setAllergyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddTag("allergies", allergyInput);
+                      setAllergyInput("");
+                    }
+                  }}
+                  placeholder="e.g. Peanut..."
+                  className="flex-1 bg-white dark:bg-gray-800 border-2 border-stone-100 dark:border-gray-800 rounded-xl px-4 py-2 text-xs font-bold focus:border-red-500 outline-none"
+                />
+              </div>
               <div className="flex flex-wrap gap-2">
-                {profile.allergies.map((a) => (
-                  <span key={a} className="inline-flex items-center gap-1 bg-red-50 dark:bg-red-500/20 text-red-700 dark:text-red-400 px-3 py-1 rounded-xl text-xs font-bold border border-red-100 dark:border-red-500/30">
+                {profile.allergies.map(a => (
+                  <span key={a} className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-3 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border border-red-100 dark:border-red-900/50">
                     {a}
-                    <button onClick={() => handleChange("allergies", profile.allergies.filter((x) => x !== a))}>
-                      <X size={14} className="hover:text-red-900 dark:hover:text-red-300" />
-                    </button>
+                    <X size={10} className="cursor-pointer" onClick={() => handleChange("allergies", profile.allergies.filter(x => x !== a))} />
                   </span>
                 ))}
               </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Disliked Foods (Press Enter)</label>
-            <input
-              type="text"
-              value={dislikeInput}
-              onChange={(e) => setDislikeInput(e.target.value)}
-              onKeyDown={handleDislikeAdd}
-              placeholder="e.g. jengkol, pete..."
-              className="w-full bg-[#F3F4F6] dark:bg-gray-800 border border-transparent rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-white outline-none transition-all font-medium mb-2"
-            />
-            {profile.disliked_foods.length > 0 && (
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500">
+                ❌ Gak Suka
+              </label>
+               <input
+                  type="text"
+                  value={dislikeInput}
+                  onChange={(e) => setDislikeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddTag("disliked_foods", dislikeInput);
+                      setDislikeInput("");
+                    }
+                  }}
+                  placeholder="e.g. Pete..."
+                  className="w-full bg-white dark:bg-gray-800 border-2 border-stone-100 dark:border-gray-800 rounded-xl px-4 py-2 text-xs font-bold focus:border-stone-400 outline-none"
+                />
               <div className="flex flex-wrap gap-2">
-                {profile.disliked_foods.map((food) => (
-                  <span key={food} className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-xl text-xs font-bold border border-gray-200 dark:border-gray-700">
-                    {food}
-                    <button onClick={() => handleChange("disliked_foods", profile.disliked_foods.filter((x) => x !== food))}>
-                      <X size={14} className="hover:text-gray-900 dark:hover:text-gray-100" />
-                    </button>
+                {profile.disliked_foods.map(f => (
+                  <span key={f} className="bg-stone-100 dark:bg-gray-800 text-stone-500 dark:text-gray-400 px-3 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 border border-stone-200 dark:border-gray-700">
+                    {f}
+                    <X size={10} className="cursor-pointer" onClick={() => handleChange("disliked_foods", profile.disliked_foods.filter(x => x !== f))} />
                   </span>
                 ))}
               </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activity Level</label>
-              <select
-                value={profile.activity_level}
-                onChange={(e) => handleChange("activity_level", e.target.value)}
-                className="w-full bg-[#F3F4F6] dark:bg-gray-800 border border-transparent rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-white outline-none transition-all font-medium appearance-none"
-              >
-                <option value="">Select...</option>
-                <option value="sedentary">Sedentary</option>
-                <option value="light">Light</option>
-                <option value="moderate">Moderate</option>
-                <option value="active">Active</option>
-                <option value="very_active">Very Active</option>
-              </select>
-            </div>
-            
-             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cooking Skill</label>
-              <select
-                value={profile.cooking_skill}
-                onChange={(e) => handleChange("cooking_skill", e.target.value)}
-                className="w-full bg-[#F3F4F6] dark:bg-gray-800 border border-transparent rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-white outline-none transition-all font-medium appearance-none"
-              >
-                <option value="">Select...</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
             </div>
           </div>
 
+          {/* Activity & Skill */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-4">
+             <section>
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500 mb-4">
+                 <Activity size={14} className="text-emerald-500" /> Aktivitas Harian
+               </label>
+               <div className="space-y-2">
+                 {['sedentary', 'moderate', 'active', 'very_active'].map((act) => (
+                   <button
+                     key={act}
+                     onClick={() => handleChange("activity_level", act)}
+                     className={cn(
+                       "w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all",
+                       profile.activity_level === act 
+                         ? "bg-violet-50 dark:bg-violet-500/10 border-violet-500 text-violet-700 dark:text-violet-400 shadow-sm" 
+                         : "bg-white dark:bg-gray-800 border-stone-100 dark:border-gray-800 hover:border-violet-200"
+                     )}
+                   >
+                     <span className="text-xs font-black uppercase tracking-tight">{act.replace('_', ' ')}</span>
+                     {profile.activity_level === act && <CheckCircle2 size={14} />}
+                   </button>
+                 ))}
+               </div>
+            </section>
+            <section>
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-gray-500 mb-4">
+                 <GraduationCap size={14} className="text-emerald-500" /> Skill Masak
+               </label>
+               <div className="space-y-2">
+                 {['beginner', 'intermediate', 'advanced'].map((skill) => (
+                   <button
+                     key={skill}
+                     onClick={() => handleChange("cooking_skill", skill)}
+                     className={cn(
+                       "w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition-all",
+                       profile.cooking_skill === skill 
+                         ? "bg-amber-50 dark:bg-amber-500/10 border-amber-500 text-amber-700 dark:text-amber-400 shadow-sm" 
+                         : "bg-white dark:bg-gray-800 border-stone-100 dark:border-gray-800 hover:border-amber-200"
+                     )}
+                   >
+                     <span className="text-xs font-black uppercase tracking-tight">{skill}</span>
+                     {profile.cooking_skill === skill && <CheckCircle2 size={14} />}
+                   </button>
+                 ))}
+               </div>
+            </section>
+          </div>
         </div>
 
-        <div className="p-5 border-t border-gray-100 dark:border-gray-800 bg-[#F9FAFB] dark:bg-gray-950 rounded-b-[32px] transition-colors duration-300">
+        {/* Footer */}
+        <div className="p-6 border-t border-stone-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex gap-3 z-10 sm:rounded-b-[32px]">
           <button
-            onClick={() => {
-              if (!profile.goal || !profile.activity_level || !profile.cooking_skill) {
-                alert("Please fill out goal, activity level, and cooking skill");
-                return;
-              }
-              onSave(profile);
-            }}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-2xl transition-all shadow-md active:scale-[0.98]"
+            onClick={onClose}
+            className="flex-1 px-6 py-4 rounded-2xl text-stone-400 font-bold hover:bg-stone-50 dark:hover:bg-gray-800 transition-colors"
           >
-            Save Profile
+            Batal
+          </button>
+          <button
+            onClick={() => onSave(profile)}
+            className="flex-[2] bg-stone-900 dark:bg-emerald-600 hover:bg-stone-800 dark:hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl shadow-stone-900/10 dark:shadow-emerald-500/20"
+          >
+            <CheckCircle2 size={20} /> Simpan Profile
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

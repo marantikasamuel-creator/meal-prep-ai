@@ -70,23 +70,45 @@ const SYSTEM_INSTRUCTION = "You are **NutriMind AI**, an expert nutritionist, pe
 export async function chatWithPrepMate(
   message: string,
   history: ChatMessageData[],
-  profile: UserProfile | null
+  profile: UserProfile | null,
+  imageBase64?: string
 ) {
   try {
     const profileContext = profile
       ? "\n\nCURRENT USER PROFILE:\n" + JSON.stringify(profile, null, 2)
       : "";
 
-    const formattedHistory = history.map((msg) => ({
-      role: msg.role,
-      parts: [{ text: msg.content }],
-    }));
+    const formattedHistory = history.map((msg) => {
+      const parts: any[] = [{ text: msg.content }];
+      if (msg.imageBase64) {
+        parts.push({
+          inlineData: {
+            data: msg.imageBase64,
+            mimeType: "image/jpeg",
+          },
+        });
+      }
+      return {
+        role: msg.role,
+        parts: parts,
+      };
+    });
+
+    const userParts: any[] = [{ text: message }];
+    if (imageBase64) {
+      userParts.push({
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/jpeg",
+        },
+      });
+    }
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
         ...formattedHistory,
-        { role: "user", parts: [{ text: message }] },
+        { role: "user", parts: userParts },
       ],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION + profileContext,

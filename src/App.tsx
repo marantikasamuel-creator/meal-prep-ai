@@ -6,12 +6,14 @@ import { CookingTimer } from "./components/CookingTimer";
 import { SavedRecipesModal } from "./components/SavedRecipesModal";
 import { RecipeData } from "./components/RecipeCard";
 import { chatWithPrepMate } from "./services/geminiService";
-import { Settings, Send, Salad, Scan, Calendar, Recycle, Frown, Sparkles, Sun, Moon, ChefHat, Bookmark } from "lucide-react";
+import { CameraScanner } from "./components/CameraScanner";
+import { Settings, Send, Salad, Scan, Calendar, Recycle, Frown, Sparkles, Sun, Moon, ChefHat, Bookmark, Camera } from "lucide-react";
 
 export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSavedModal, setShowSavedModal] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const [savedRecipes, setSavedRecipes] = useState<RecipeData[]>([]);
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -49,8 +51,8 @@ export default function App() {
     }
   }, [messages.length]);
 
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+  const handleSendMessage = async (text: string, imageBase64?: string) => {
+    if (!text.trim() && !imageBase64) return;
 
     if (!profile) {
       setShowProfileModal(true);
@@ -60,7 +62,8 @@ export default function App() {
     const newMessage: ChatMessageData = {
       id: Date.now().toString(),
       role: "user",
-      content: text,
+      content: imageBase64 ? (text || "[MENGIRIM FOTO BAHAN MAKANAN]") : text,
+      imageBase64,
       timestamp: new Date(),
     };
 
@@ -70,7 +73,12 @@ export default function App() {
     setIsLoading(true);
 
     try {
-      const responseText = await chatWithPrepMate(text, messages, profile);
+      const responseText = await chatWithPrepMate(
+        imageBase64 ? `[SCAN] ${text}` : text,
+        messages,
+        profile,
+        imageBase64
+      );
       setMessages((prev) => [
         ...prev,
         {
@@ -123,8 +131,8 @@ export default function App() {
   ];
 
   return (
-    <div className="flex justify-center h-screen bg-[#F3F4F6] text-[#1F2937] dark:bg-gray-950 dark:text-gray-100 font-sans p-4 sm:p-6 overflow-hidden transition-colors duration-300">
-      <div className="w-full max-w-[1024px] h-full flex flex-col gap-5">
+    <div className="flex justify-center h-screen bg-[#F3F4F6] text-[#1F2937] dark:bg-gray-950 dark:text-gray-100 font-sans p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-6 overflow-hidden transition-colors duration-300">
+      <div className="w-full max-w-[1024px] h-full flex flex-col gap-3 sm:gap-5">
         
         {/* Header Section */}
         <header className="flex justify-between items-center bg-white dark:bg-gray-900 p-3 sm:p-4 rounded-[24px] shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 transition-colors duration-300">
@@ -172,16 +180,17 @@ export default function App() {
 
         {/* Main Bento Grid */}
         <div className="flex-1 flex flex-col md:grid md:grid-cols-12 md:grid-rows-6 gap-3 sm:gap-5 min-h-0">
-          
-          {/* Chat Messages (Large Left) */}
+          {/* Chat Panel (Large Left) */}
           <div className="flex-1 lg:col-span-8 md:col-span-7 md:row-span-6 bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden min-h-0 transition-colors duration-300">
-            <div className="flex justify-between items-start sm:items-center mb-4 shrink-0 flex-col sm:flex-row gap-3 sm:gap-0">
-              <h2 className="text-lg font-bold flex items-center gap-2 text-gray-800 dark:text-gray-100">
+            <div className="flex justify-between items-center mb-0 md:mb-4 shrink-0 gap-3 md:gap-0">
+              <h2 className="text-lg font-bold hidden md:flex items-center gap-2 text-gray-800 dark:text-gray-100">
                 💬 CHAT & PLANS
               </h2>
-              <CookingTimer />
+              <div className="w-full md:w-auto flex justify-end mb-2 md:mb-0">
+                <CookingTimer />
+              </div>
             </div>
-            <main className="flex-1 overflow-y-auto pr-2 space-y-4">
+            <main className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4">
               {!profile && messages.length > 1 && (
                 <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm p-4 rounded-2xl mb-4 font-medium flex items-center gap-3">
                   <span className="text-xl">⚠️</span> 
@@ -199,7 +208,7 @@ export default function App() {
               ))}
               
               {isLoading && (
-                <div className="flex w-full mb-4 justify-start">
+                <div className="flex w-full justify-start">
                   <div className="bg-[#F9FAFB] dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex space-x-2 items-center h-12">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
@@ -209,10 +218,69 @@ export default function App() {
               )}
               <div ref={messagesEndRef} />
             </main>
+
+            {/* Mobile Quick Actions */}
+            <div className="relative flex md:hidden shrink-0 mt-1 mb-2 w-full">
+              <div className="flex flex-1 overflow-x-auto gap-2 pb-1 pr-8 no-scrollbar relative z-10 w-full">
+                {quickActions.map((action, idx) => {
+                  const ActionIcon = action.icon;
+                  const needsInput = action.command.endsWith(" ");
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        if (needsInput) {
+                          setInputValue(action.command);
+                        } else {
+                          handleSendMessage(action.command);
+                        }
+                      }}
+                      className="whitespace-nowrap shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-[14px] text-xs font-bold text-gray-700 dark:text-gray-200 active:bg-gray-200 dark:active:bg-gray-700 transition-colors shadow-sm"
+                    >
+                        <ActionIcon size={14} className={needsInput ? "text-emerald-500" : "text-orange-500"} />
+                        {action.label}
+                    </button>
+                  )
+                })}
+              </div>
+              {/* Fade out mask for scrolling */}
+              <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-gray-900 to-transparent pointer-events-none z-20"></div>
+            </div>
+
+            {/* Chat Input */}
+            <div className="shrink-0 flex gap-2 sm:gap-3 items-end">
+              <button
+                onClick={() => setShowCamera(true)}
+                className="shrink-0 aspect-square w-[56px] h-[56px] bg-stone-50 dark:bg-gray-800 hover:bg-stone-100 dark:hover:bg-gray-700 text-stone-600 dark:text-gray-300 rounded-[20px] transition-all flex items-center justify-center border border-gray-100 dark:border-gray-700 shadow-sm active:scale-95"
+              >
+                <Camera size={24} />
+              </button>
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(inputValue);
+                    }
+                }}
+                placeholder="Ketik pesan..."
+                className="flex-1 bg-[#F9FAFB] dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 text-[#1F2937] dark:text-gray-100 rounded-[20px] sm:rounded-[24px] px-4 py-3.5 outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 dark:focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 transition-all resize-none shadow-sm leading-relaxed text-base self-end"
+                rows={1}
+                style={{ minHeight: '56px', maxHeight: '120px' }}
+              />
+              <button
+                onClick={() => handleSendMessage(inputValue)}
+                disabled={!inputValue.trim() || isLoading}
+                className="shrink-0 aspect-square w-[56px] h-[56px] bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 text-white font-bold rounded-[20px] transition-all shadow-md flex items-center justify-center active:scale-95"
+              >
+                <Send size={24} className="ml-1" />
+              </button>
+            </div>
           </div>
 
-          {/* Quick Actions (Top Right - Desktop) */}
-          <div className="hidden md:flex lg:col-span-4 md:col-span-5 md:row-span-3 bg-white dark:bg-[#111827] rounded-[32px] p-6 shadow-sm dark:shadow-xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white flex-col overflow-hidden relative transition-colors duration-300">
+          {/* Quick Actions (Right Panel - Desktop) */}
+          <div className="hidden md:flex lg:col-span-4 md:col-span-5 md:row-span-6 bg-white dark:bg-[#111827] rounded-[32px] p-6 shadow-sm dark:shadow-xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white flex-col overflow-hidden relative transition-colors duration-300">
             <div className="absolute top-0 right-0 p-3 opacity-10">
                <Sparkles size={80} />
             </div>
@@ -243,67 +311,18 @@ export default function App() {
               })}
             </div>
           </div>
-
-          {/* Chat Input (Bottom Right) */}
-          <div className="shrink-0 lg:col-span-4 md:col-span-5 md:row-span-3 bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col justify-end transition-colors duration-300">
-             {/* Mobile Quick Actions */}
-             <div className="flex md:hidden overflow-x-auto gap-2 pb-3">
-               {quickActions.map((action, idx) => {
-                 const ActionIcon = action.icon;
-                 const needsInput = action.command.endsWith(" ");
-                 return (
-                   <button
-                     key={idx}
-                     onClick={() => {
-                       if (needsInput) {
-                         setInputValue(action.command);
-                       } else {
-                         handleSendMessage(action.command);
-                       }
-                     }}
-                     className="whitespace-nowrap shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700 transition-colors shadow-sm"
-                   >
-                       <ActionIcon size={14} className={needsInput ? "text-emerald-500" : "text-orange-500"} />
-                       {action.label}
-                   </button>
-                 )
-               })}
-             </div>
-
-             <div className="flex mb-3 sm:mb-4 items-center gap-3 hidden sm:flex">
-                 <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 flex items-center justify-center font-bold text-lg transition-colors">📝</div>
-                 <div>
-                   <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 tracking-tight transition-colors">Ketik Pesan</h2>
-                   <p className="text-[10px] text-gray-500 font-medium">Tanya resep atau update kalori</p>
-                 </div>
-             </div>
-             
-             <div className="flex flex-row sm:flex-col gap-2 sm:gap-3">
-               <textarea
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                     if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage(inputValue);
-                     }
-                  }}
-                  placeholder="Ketik pesan..."
-                  className="w-full bg-[#F3F4F6] dark:bg-gray-800 border border-transparent text-sm text-gray-900 dark:text-gray-100 rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-700 transition-all resize-none h-12 sm:h-24 shadow-inner"
-                />
-                <button
-                  onClick={() => handleSendMessage(inputValue)}
-                  disabled={!inputValue.trim() || isLoading}
-                  className="shrink-0 aspect-square sm:aspect-auto sm:w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 text-white font-bold px-4 py-0 sm:px-5 sm:py-3.5 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2"
-                >
-                  <span className="hidden sm:inline">Kirim Pesan</span> <Send size={20} className="sm:w-4 sm:h-4" />
-                </button>
-             </div>
-          </div>
-
         </div>
 
         {/* Modals */}
+        {showCamera && (
+          <CameraScanner
+            onCapture={(base64) => {
+              setShowCamera(false);
+              handleSendMessage(inputValue, base64);
+            }}
+            onClose={() => setShowCamera(false)}
+          />
+        )}
         {showSavedModal && (
           <SavedRecipesModal 
             savedRecipes={savedRecipes}

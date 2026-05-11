@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Square, Timer as TimerIcon } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, X, Plus, Minus, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../lib/utils';
 
 export function CookingTimer() {
+  const [isOpen, setIsOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [inputMinutes, setInputMinutes] = useState('');
@@ -14,91 +17,121 @@ export function CookingTimer() {
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
       setIsActive(false);
-      // Play a sound or notification here if needed
-      if (window.AudioContext) {
-        const audioCtx = new window.AudioContext();
-        const oscillator = audioCtx.createOscillator();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // 440 Hz
-        oscillator.connect(audioCtx.destination);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 1);
-      }
+      // Optional: sound notification if possible in browser
     }
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const startTimer = () => {
-    if (timeLeft > 0) {
+    const mins = parseInt(inputMinutes);
+    if (!isNaN(mins) && mins > 0) {
+      setTimeLeft(mins * 60);
       setIsActive(true);
-    } else if (inputMinutes) {
-      const mins = parseInt(inputMinutes, 10);
-      if (!isNaN(mins) && mins > 0) {
-        setTimeLeft(mins * 60);
-        setIsActive(true);
-      }
+      setInputMinutes('');
     }
   };
 
-  const togglePause = () => setIsActive(!isActive);
-  
-  const stopTimer = () => {
-    setIsActive(false);
-    setTimeLeft(0);
-    setInputMinutes('');
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const adjustTime = (mins: number) => {
+    setTimeLeft(prev => Math.max(0, prev + mins * 60));
   };
 
   return (
-    <div className="bg-emerald-50 dark:bg-gray-800 border border-emerald-100 dark:border-gray-700 rounded-xl p-2 shadow-sm flex items-center gap-3 shrink-0">
-      <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-400 font-bold text-xs uppercase tracking-wide">
-        <TimerIcon size={14} />
-        <span className="hidden sm:inline">Timer</span>
-      </div>
-      
-      {timeLeft === 0 && !isActive ? (
-        <div className="flex gap-1.5">
-          <input
-            type="number"
-            min="1"
-            value={inputMinutes}
-            onChange={(e) => setInputMinutes(e.target.value)}
-            placeholder="Min"
-            className="w-14 bg-white dark:bg-gray-900 border border-emerald-200 dark:border-gray-600 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-emerald-500 font-medium text-gray-900 dark:text-gray-100 text-center"
-          />
-          <button
-            onClick={startTimer}
-            disabled={!inputMinutes}
-            className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 disabled:dark:bg-emerald-800 disabled:cursor-not-allowed text-white px-2 py-1 rounded-lg flex items-center justify-center transition-colors"
-          >
-            <Play size={12} fill="currentColor" />
-          </button>
+    <div className="relative">
+      <motion.div 
+        layout
+        className={cn(
+          "bg-white dark:bg-gray-900 border border-stone-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col items-center justify-center",
+          isOpen ? "rounded-[24px] p-4 w-64 mt-2 absolute right-0 top-full z-50 origin-top-right shadow-xl" : "rounded-full p-1 h-10 w-auto"
+        )}
+      >
+        <div className={cn(isOpen ? "flex flex-col w-full" : "flex items-center gap-2 px-3 h-full")}>
+           <button 
+            onClick={() => setIsOpen(!isOpen)}
+            className={cn(
+              "flex items-center gap-2 transition-colors",
+              !isOpen ? "text-stone-600 dark:text-gray-400 hover:text-emerald-600" : "text-stone-400 mb-4 w-full justify-between"
+            )}
+           >
+               <div className="flex items-center gap-2">
+               <Timer size={18} className={isActive ? "text-emerald-500 animate-pulse" : ""} />
+               {!isOpen && timeLeft > 0 && <span className="text-xs font-black font-mono tracking-tight">{formatTime(timeLeft)}</span>}
+               {!isOpen && timeLeft === 0 && <span className="text-xs font-bold uppercase tracking-widest inline">Timer</span>}
+             </div>
+             {isOpen && <X size={18} />}
+           </button>
+
+           <AnimatePresence>
+             {isOpen && (
+               <motion.div 
+                 initial={{ opacity: 0 }}
+                 animate={{ opacity: 1 }}
+                 exit={{ opacity: 0 }}
+                 className="w-full space-y-4"
+               >
+                 <div className="text-center">
+                    <div className="text-3xl font-black font-mono tracking-tighter text-stone-800 dark:text-white tabular-nums">
+                      {formatTime(timeLeft)}
+                    </div>
+                 </div>
+
+                 {timeLeft === 0 && !isActive ? (
+                   <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={inputMinutes}
+                        onChange={(e) => setInputMinutes(e.target.value)}
+                        placeholder="Min"
+                        className="flex-1 bg-stone-50 dark:bg-gray-800 border-none rounded-xl px-3 py-2 text-sm text-center outline-none focus:ring-2 focus:ring-emerald-500/20"
+                      />
+                      <button 
+                        onClick={startTimer}
+                        disabled={!inputMinutes}
+                        className="bg-emerald-500 text-white p-2 rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                      >
+                        <Play size={18} fill="currentColor" />
+                      </button>
+                   </div>
+                 ) : (
+                   <div className="space-y-4">
+                     <div className="flex justify-center gap-3">
+                        <button onClick={() => adjustTime(-1)} className="p-2 hover:bg-stone-50 dark:hover:bg-gray-800 rounded-lg text-stone-500"><Minus size={16} /></button>
+                        <button 
+                          onClick={() => setIsActive(!isActive)}
+                          className={cn(
+                            "w-12 h-12 flex items-center justify-center rounded-full transition-colors",
+                            isActive ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" : "bg-emerald-500 text-white"
+                          )}
+                        >
+                          {isActive ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
+                        </button>
+                        <button onClick={() => adjustTime(1)} className="p-2 hover:bg-stone-50 dark:hover:bg-gray-800 rounded-lg text-stone-500"><Plus size={16} /></button>
+                     </div>
+                     <button 
+                       onClick={() => { setTimeLeft(0); setIsActive(false); }}
+                       className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-widest text-stone-400 hover:text-red-500 transition-colors"
+                     >
+                       <RotateCcw size={12} /> Reset Timer
+                     </button>
+                   </div>
+                 )}
+               </motion.div>
+             )}
+           </AnimatePresence>
         </div>
-      ) : (
-        <div className="flex items-center justify-between gap-3 bg-white dark:bg-gray-900 rounded-lg px-2 py-1 border border-emerald-100 dark:border-gray-600">
-          <div className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">
-            {formatTime(timeLeft)}
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={togglePause}
-              className="px-1.5 py-1 hover:bg-emerald-50 dark:hover:bg-gray-800 rounded flex items-center justify-center text-emerald-600 dark:text-emerald-400 transition-colors"
-            >
-              {isActive ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
-            </button>
-            <button
-              onClick={stopTimer}
-              className="px-1.5 py-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded flex items-center justify-center text-red-500 transition-colors"
-            >
-              <Square size={12} fill="currentColor" />
-            </button>
-          </div>
-        </div>
+      </motion.div>
+
+      {/* Overlay to close when clicking outside */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40"
+          onClick={() => setIsOpen(false)}
+        />
       )}
     </div>
   );
