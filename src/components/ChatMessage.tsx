@@ -9,19 +9,44 @@ interface ChatMessageProps {
   message: ChatMessageData;
   onSaveRecipe?: (recipe: RecipeData) => void;
   savedRecipes?: RecipeData[];
+  onSavePlan?: (plan: WeeklyPlanData) => void;
+  savedPlans?: WeeklyPlanData[];
 }
 
-export function ChatMessage({ message, onSaveRecipe, savedRecipes = [] }: ChatMessageProps) {
+export function ChatMessage({ message, onSaveRecipe, savedRecipes = [], onSavePlan, savedPlans = [] }: ChatMessageProps) {
   const isUser = message.role === "user";
 
   const renderContent = (content: string) => {
     // Regex to match ```json ... ``` blocks
-    const regex = /```json\n([\s\S]*?)\n```/g;
+    const regex = /```(?:json)?\s*\n([\s\S]*?)\n```/gi;
     const matches = [...content.matchAll(regex)];
 
     if (matches.length === 0) {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.type === "recipe" && parsed.data) {
+           const isSaved = savedRecipes.some(r => r.title === parsed.data.title);
+           return (
+              <RecipeCard 
+                recipe={parsed.data} 
+                isSaved={isSaved}
+                onToggleSave={() => onSaveRecipe && onSaveRecipe(parsed.data)}
+              />
+           );
+        } else if (parsed.type === "weekly_plan" && parsed.data) {
+           const isSavedPlan = savedPlans.some(p => p.prepDay === parsed.data.prepDay && JSON.stringify(p.schedule) === JSON.stringify(parsed.data.schedule));
+           return <WeeklyPlanCard 
+              plan={parsed.data} 
+              isSaved={isSavedPlan} 
+              onToggleSave={() => onSavePlan && onSavePlan(parsed.data)} 
+           />;
+        }
+      } catch (e) {
+        // Not JSON
+      }
+
       return (
-        <div className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none prose-p:leading-relaxed prose-li:my-0.5 text-black dark:text-gray-200 prose-p:text-black dark:prose-p:text-gray-200 prose-headings:text-black dark:prose-headings:text-gray-100 prose-strong:text-black dark:prose-strong:text-white">
+        <div className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none break-words overflow-x-auto prose-p:leading-relaxed prose-li:my-0.5 text-black dark:text-gray-200 prose-p:text-black dark:prose-p:text-gray-200 prose-headings:text-black dark:prose-headings:text-gray-100 prose-strong:text-black dark:prose-strong:text-white">
           <Markdown>{content}</Markdown>
         </div>
       );
@@ -38,7 +63,7 @@ export function ChatMessage({ message, onSaveRecipe, savedRecipes = [] }: ChatMe
         const textBefore = content.substring(lastIndex, matchIndex);
         if (textBefore.trim()) {
            segments.push(
-             <div key={`md-${idx}`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none prose-p:leading-relaxed prose-li:my-0.5 text-black dark:text-gray-200 prose-p:text-black dark:prose-p:text-gray-200 prose-headings:text-black dark:prose-headings:text-gray-100 prose-strong:text-black dark:prose-strong:text-white">
+             <div key={`md-${idx}`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none break-words overflow-x-auto prose-p:leading-relaxed prose-li:my-0.5 text-black dark:text-gray-200 prose-p:text-black dark:prose-p:text-gray-200 prose-headings:text-black dark:prose-headings:text-gray-100 prose-strong:text-black dark:prose-strong:text-white">
                <Markdown>{textBefore}</Markdown>
              </div>
            );
@@ -59,11 +84,19 @@ export function ChatMessage({ message, onSaveRecipe, savedRecipes = [] }: ChatMe
             />
           );
         } else if (parsed.type === "weekly_plan" && parsed.data) {
-          segments.push(<WeeklyPlanCard key={`weekly-${idx}`} plan={parsed.data} />);
+          const isSavedPlan = savedPlans.some(p => p.prepDay === parsed.data.prepDay && JSON.stringify(p.schedule) === JSON.stringify(parsed.data.schedule));
+          segments.push(
+            <WeeklyPlanCard 
+              key={`weekly-${idx}`} 
+              plan={parsed.data} 
+              isSaved={isSavedPlan} 
+              onToggleSave={() => onSavePlan && onSavePlan(parsed.data)} 
+            />
+          );
         } else {
           // If not our specific format, render as normal code block
           segments.push(
-             <div key={`md-json-${idx}`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none">
+             <div key={`md-json-${idx}`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none break-words overflow-x-auto">
                <Markdown>{match[0]}</Markdown>
              </div>
           );
@@ -71,7 +104,7 @@ export function ChatMessage({ message, onSaveRecipe, savedRecipes = [] }: ChatMe
       } catch {
         // If JSON fails to parse, render as normal text code block
         segments.push(
-           <div key={`md-fail-${idx}`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none">
+           <div key={`md-fail-${idx}`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none break-words overflow-x-auto">
              <Markdown>{match[0]}</Markdown>
            </div>
         );
@@ -85,7 +118,7 @@ export function ChatMessage({ message, onSaveRecipe, savedRecipes = [] }: ChatMe
       const textAfter = content.substring(lastIndex);
       if (textAfter.trim()) {
         segments.push(
-          <div key={`md-last`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none prose-p:leading-relaxed prose-li:my-0.5 text-black dark:text-gray-200 prose-p:text-black dark:prose-p:text-gray-200 prose-headings:text-black dark:prose-headings:text-gray-100 prose-strong:text-black dark:prose-strong:text-white">
+          <div key={`md-last`} className="markdown-body prose prose-slate prose-sm sm:prose-base dark:prose-invert max-w-none break-words overflow-x-auto prose-p:leading-relaxed prose-li:my-0.5 text-black dark:text-gray-200 prose-p:text-black dark:prose-p:text-gray-200 prose-headings:text-black dark:prose-headings:text-gray-100 prose-strong:text-black dark:prose-strong:text-white">
             <Markdown>{textAfter}</Markdown>
           </div>
         );
@@ -109,10 +142,10 @@ export function ChatMessage({ message, onSaveRecipe, savedRecipes = [] }: ChatMe
       )}
       <div
         className={cn(
-          "max-w-[90%] sm:max-w-[80%] rounded-[24px] px-4 py-3 sm:px-5 sm:py-4 shadow-sm text-sm sm:text-base selection:bg-emerald-500/30 transition-colors duration-300",
+          "rounded-[24px] px-3 py-3 sm:px-5 sm:py-4 shadow-sm text-sm sm:text-base selection:bg-emerald-500/30 transition-colors duration-300 min-w-0 w-full",
           isUser
-            ? "bg-emerald-600 text-white rounded-tr-sm"
-            : "bg-[#F9FAFB] dark:bg-gray-800 text-gray-800 dark:text-white rounded-tl-sm border border-gray-100 dark:border-gray-700"
+            ? "max-w-[95%] sm:max-w-[80%] bg-emerald-600 text-white rounded-tr-sm"
+            : "max-w-[calc(100%-36px)] sm:max-w-[80%] bg-[#F9FAFB] dark:bg-gray-800 text-gray-800 dark:text-white rounded-tl-sm border border-gray-100 dark:border-gray-700"
         )}
       >
         {isUser ? (

@@ -4,7 +4,7 @@ import { Camera, X, RefreshCcw, Check, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface CameraScannerProps {
-  onCapture: (base64Image: string) => void;
+  onCapture: (base64Image: string, mode: 'ingredients' | 'calories') => void;
   onClose: () => void;
 }
 
@@ -16,6 +16,7 @@ export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'ingredients' | 'calories'>('ingredients');
 
   const startCamera = useCallback(async () => {
     setIsLoading(true);
@@ -72,7 +73,7 @@ export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
     if (capturedImage) {
       const parts = capturedImage.split(',');
       if (parts.length === 2) {
-         onCapture(parts[1]);
+         onCapture(parts[1], mode);
       }
     }
   };
@@ -87,8 +88,8 @@ export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
           <X size={20} />
         </button>
         <span className="text-white font-bold tracking-widest text-xs uppercase flex items-center gap-1">
-          <Sparkles size={14} className="text-emerald-400" />
-          Scan Bahan
+          <Sparkles size={14} className={mode === 'ingredients' ? 'text-emerald-400' : 'text-orange-400'} />
+          {mode === 'ingredients' ? 'Scan Bahan' : 'Cek Kalori'}
         </span>
         {!capturedImage && (
           <button 
@@ -137,7 +138,29 @@ export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
         )}
       </div>
 
-      <div className="p-8 bg-stone-900 pb-12 flex justify-center items-center">
+      <div className="p-6 bg-stone-900 pb-12 flex flex-col justify-center items-center gap-6">
+        {!capturedImage && (
+          <div className="flex bg-stone-800 rounded-full p-1 border border-stone-700 w-full max-w-[240px]">
+            <button
+              onClick={() => setMode('ingredients')}
+              className={cn(
+                "flex-1 py-2 px-4 rounded-full text-xs font-bold transition-colors uppercase tracking-wider",
+                mode === 'ingredients' ? "bg-emerald-500 text-white" : "text-stone-400 hover:text-white"
+              )}
+            >
+              Bahan
+            </button>
+            <button
+              onClick={() => setMode('calories')}
+              className={cn(
+                "flex-1 py-2 px-4 rounded-full text-xs font-bold transition-colors uppercase tracking-wider",
+                mode === 'calories' ? "bg-orange-500 text-white" : "text-stone-400 hover:text-white"
+              )}
+            >
+              Kalori
+            </button>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {!capturedImage ? (
             <motion.div
@@ -150,11 +173,14 @@ export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
               <button 
                 onClick={handleCapture}
                 disabled={isLoading || !!error}
-                className="w-20 h-20 bg-emerald-500 hover:bg-emerald-600 rounded-full border-4 border-stone-800 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_0_4px_rgba(16,185,129,0.3)] active:scale-95"
+                className={cn(
+                  "w-20 h-20 rounded-full border-4 border-stone-800 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_0_4px_rgba(16,185,129,0.3)] active:scale-95",
+                  mode === 'ingredients' ? "bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_0_4px_rgba(16,185,129,0.3)]" : "bg-orange-500 hover:bg-orange-600 shadow-[0_0_0_4px_rgba(249,115,22,0.3)]"
+                )}
               >
                 <Camera size={32} className="text-white" />
               </button>
-              <span className="text-stone-400 text-xs font-bold uppercase tracking-widest">Foto Bahan Lo</span>
+              <span className="text-stone-400 text-xs font-bold uppercase tracking-widest">{mode === 'ingredients' ? 'Foto Bahan Lo' : 'Foto Makanan Lo'}</span>
             </motion.div>
           ) : (
             <motion.div
@@ -172,7 +198,10 @@ export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
                </button>
                <button 
                  onClick={confirmCapture}
-                 className="flex-1 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2"
+                 className={cn(
+                   "flex-1 py-4 text-white rounded-2xl font-black transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2",
+                   mode === 'ingredients' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-orange-500 hover:bg-orange-600"
+                 )}
                >
                  <Check size={18} /> Pakai Foto
                </button>

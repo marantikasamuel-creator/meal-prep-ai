@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Timer, Play, Pause, RotateCcw, X, Plus, Minus, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -8,6 +8,29 @@ export function CookingTimer() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [inputMinutes, setInputMinutes] = useState('');
+  const [isRinging, setIsRinging] = useState(false);
+
+  const playAlarmSound = useCallback(() => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+      oscillator.frequency.setValueAtTime(0, audioCtx.currentTime + 0.2);
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.4);
+      oscillator.frequency.setValueAtTime(0, audioCtx.currentTime + 0.6);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.8);
+    } catch (e) {
+      console.log("Audio not supported", e);
+    }
+  }, []);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -17,10 +40,16 @@ export function CookingTimer() {
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
       setIsActive(false);
-      // Optional: sound notification if possible in browser
+      setIsRinging(true);
+      playAlarmSound();
+      
+      // Auto dismiss ring after 5 seconds
+      setTimeout(() => {
+        setIsRinging(false);
+      }, 5000);
     }
     return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
+  }, [isActive, timeLeft, playAlarmSound]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -47,21 +76,28 @@ export function CookingTimer() {
         layout
         className={cn(
           "bg-white dark:bg-gray-900 border border-stone-200 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col items-center justify-center",
-          isOpen ? "rounded-[24px] p-4 w-64 mt-2 absolute right-0 top-full z-50 origin-top-right shadow-xl" : "rounded-full p-1 h-10 w-auto"
+          isOpen ? "rounded-[24px] p-4 w-64 mt-2 absolute right-0 top-full z-50 origin-top-right shadow-xl" : "rounded-full p-1 h-10 w-auto",
+          isRinging && !isOpen && "animate-bounce ring-4 ring-red-500 bg-red-50 dark:bg-red-900/30"
         )}
       >
         <div className={cn(isOpen ? "flex flex-col w-full" : "flex items-center gap-2 px-3 h-full")}>
            <button 
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => {
+              setIsOpen(!isOpen);
+              if (isRinging) setIsRinging(false);
+            }}
             className={cn(
               "flex items-center gap-2 transition-colors",
               !isOpen ? "text-stone-600 dark:text-gray-400 hover:text-emerald-600" : "text-stone-400 mb-4 w-full justify-between"
             )}
            >
                <div className="flex items-center gap-2">
-               <Timer size={18} className={isActive ? "text-emerald-500 animate-pulse" : ""} />
+               <Timer size={18} className={cn(
+                 isActive ? "text-emerald-500 animate-pulse" : "",
+                 isRinging ? "text-red-500" : ""
+               )} />
                {!isOpen && timeLeft > 0 && <span className="text-xs font-black font-mono tracking-tight">{formatTime(timeLeft)}</span>}
-               {!isOpen && timeLeft === 0 && <span className="text-xs font-bold uppercase tracking-widest inline">Timer</span>}
+               {!isOpen && timeLeft === 0 && <span className={cn("text-xs font-bold uppercase tracking-widest inline", isRinging ? "text-red-500" : "")}>{isRinging ? "SELESAI!" : "Timer"}</span>}
              </div>
              {isOpen && <X size={18} />}
            </button>
@@ -113,7 +149,7 @@ export function CookingTimer() {
                         <button onClick={() => adjustTime(1)} className="p-2 hover:bg-stone-50 dark:hover:bg-gray-800 rounded-lg text-stone-500"><Plus size={16} /></button>
                      </div>
                      <button 
-                       onClick={() => { setTimeLeft(0); setIsActive(false); }}
+                       onClick={() => { setTimeLeft(0); setIsActive(false); setIsRinging(false); }}
                        className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-widest text-stone-400 hover:text-red-500 transition-colors"
                      >
                        <RotateCcw size={12} /> Reset Timer

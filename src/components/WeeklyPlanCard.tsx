@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, ShoppingCart, Clock, Wallet, CheckCircle2, ChevronRight, Apple, Coffee, Pizza, Cookie, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, ShoppingCart, Clock, Wallet, CheckCircle2, ChevronRight, Apple, Coffee, Pizza, Cookie, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -17,7 +17,7 @@ export interface WeeklyPlanData {
   }[];
 }
 
-export function WeeklyPlanCard({ plan }: { plan: WeeklyPlanData }) {
+export function WeeklyPlanCard({ plan, isSaved = false, onToggleSave }: { plan: WeeklyPlanData; isSaved?: boolean; onToggleSave?: () => void }) {
   const [activeDayIdx, setActiveDayIdx] = useState(0);
   const [showShoppingList, setShowShoppingList] = useState(false);
 
@@ -30,10 +30,19 @@ export function WeeklyPlanCard({ plan }: { plan: WeeklyPlanData }) {
         <div className="absolute top-0 right-0 p-4 opacity-10">
           <Calendar size={120} />
         </div>
-        <h3 className="text-xl font-heading font-bold mb-4 flex items-center gap-2 relative z-10">
-          <Calendar size={24} />
-          Your Weekly Prep Plan
-        </h3>
+        <div className="flex flex-col sm:flex-row justify-between items-start relative z-10 mb-4 gap-3 sm:gap-4 w-full">
+          <h3 className="text-xl font-heading font-bold flex items-center gap-2 min-w-0">
+            <Calendar size={24} className="shrink-0" />
+            <span className="break-words whitespace-normal leading-tight">Your Weekly Prep Plan</span>
+          </h3>
+          <button 
+            onClick={onToggleSave}
+            className="p-2 w-full sm:w-auto hover:bg-white/20 rounded-xl transition-colors relative flex justify-center shrink-0 border border-white/20 sm:border-transparent"
+            title={isSaved ? "Hapus dari Simpanan" : "Simpan Plan"}
+          >
+            <Bookmark size={20} className={cn(isSaved ? "fill-white text-white" : "text-white/80")} />
+          </button>
+        </div>
         <div className="grid grid-cols-3 gap-2 relative z-10">
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20">
             <div className="text-[10px] uppercase font-bold tracking-widest text-emerald-100 mb-1">Batch Day</div>
@@ -41,7 +50,7 @@ export function WeeklyPlanCard({ plan }: { plan: WeeklyPlanData }) {
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20">
             <div className="text-[10px] uppercase font-bold tracking-widest text-emerald-100 mb-1">Estimated Cost</div>
-            <div className="text-xs font-bold leading-tight line-clamp-1">{plan.estimatedCost}</div>
+            <div className="text-xs font-bold leading-tight">{plan.estimatedCost}</div>
           </div>
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20">
             <div className="text-[10px] uppercase font-bold tracking-widest text-emerald-100 mb-1">Prep Time</div>
@@ -74,42 +83,42 @@ export function WeeklyPlanCard({ plan }: { plan: WeeklyPlanData }) {
             ))}
           </div>
 
-          <div className="mt-4 bg-stone-50 dark:bg-gray-800/50 rounded-2xl border border-stone-100 dark:border-gray-800 p-5">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0 mt-0.5">
-                  <Coffee size={18} />
+          <div className="mt-4 bg-stone-50 dark:bg-gray-800/50 rounded-2xl border border-stone-100 dark:border-gray-800 p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+              <div className="flex gap-2 sm:gap-3 items-start">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0 mt-0.5">
+                  <Coffee size={16} />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-bold text-stone-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Breakfast</div>
-                  <div className="text-sm font-bold leading-tight">{activeDay.breakfast}</div>
+                  <div className="text-xs sm:text-sm font-bold leading-tight break-words">{activeDay.breakfast}</div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
-                  <Pizza size={18} />
+              <div className="flex gap-2 sm:gap-3 items-start">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+                  <Pizza size={16} />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-bold text-stone-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Lunch</div>
-                  <div className="text-sm font-bold leading-tight">{activeDay.lunch}</div>
+                  <div className="text-xs sm:text-sm font-bold leading-tight break-words">{activeDay.lunch}</div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0 mt-0.5">
-                  <Apple size={18} />
+              <div className="flex gap-2 sm:gap-3 items-start">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 shrink-0 mt-0.5">
+                  <Apple size={16} />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-bold text-stone-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Dinner</div>
-                  <div className="text-sm font-bold leading-tight">{activeDay.dinner}</div>
+                  <div className="text-xs sm:text-sm font-bold leading-tight break-words">{activeDay.dinner}</div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
-                  <Cookie size={18} />
+              <div className="flex gap-2 sm:gap-3 items-start">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                  <Cookie size={16} />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-bold text-stone-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Snack</div>
-                  <div className="text-sm font-bold leading-tight">{activeDay.snack}</div>
+                  <div className="text-xs sm:text-sm font-bold leading-tight break-words">{activeDay.snack}</div>
                 </div>
               </div>
             </div>

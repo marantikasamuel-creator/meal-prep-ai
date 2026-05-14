@@ -7,15 +7,45 @@ import { SavedRecipesModal } from "./components/SavedRecipesModal";
 import { RecipeData } from "./components/RecipeCard";
 import { chatWithPrepMate } from "./services/geminiService";
 import { CameraScanner } from "./components/CameraScanner";
-import { Settings, Send, Salad, Scan, Calendar, Recycle, Frown, Sparkles, Sun, Moon, ChefHat, Bookmark, Camera } from "lucide-react";
+import { Settings, Send, Salad, Scan, Calendar, Recycle, Frown, Sparkles, Sun, Moon, ChefHat, Bookmark, Camera, Trash2 } from "lucide-react";
 
 export default function App() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('prepmate_profile');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to parse profile from local storage", e);
+    }
+    return null;
+  });
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [savedRecipes, setSavedRecipes] = useState<RecipeData[]>([]);
-  const [messages, setMessages] = useState<ChatMessageData[]>([]);
+  const [savedPlans, setSavedPlans] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('prepmate_plans');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to parse plans", e);
+    }
+    return [];
+  });
+  const [messages, setMessages] = useState<ChatMessageData[]>(() => {
+    try {
+      const saved = localStorage.getItem('prepmate_messages');
+      if (saved) {
+        return JSON.parse(saved).map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        }));
+      }
+    } catch (e) {
+      console.error("Failed to parse messages from local storage", e);
+    }
+    return [];
+  });
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,22 +62,69 @@ export default function App() {
     }
   }, [theme]);
 
+  // Persist messages
+  useEffect(() => {
+    localStorage.setItem('prepmate_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  // Persist profile
+  useEffect(() => {
+    if (profile) {
+      localStorage.setItem('prepmate_profile', JSON.stringify(profile));
+    } else {
+      localStorage.removeItem('prepmate_profile');
+    }
+  }, [profile]);
+
   // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Intercept Shared Recipe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedRecipeEncoded = params.get('sharedRecipe');
+    if (sharedRecipeEncoded && messages.length <= 1) {
+      try {
+        const recipeJson = decodeURIComponent(atob(sharedRecipeEncoded));
+        const recipeBlock = "```json\n" + recipeJson + "\n```";
+        setMessages(prev => [
+            {
+               id: Date.now().toString() + "-welcome",
+               role: "model",
+               content: "👋 Halo! Gue **PrepMate**, asisten meal prep AI lo.",
+               timestamp: new Date()
+            },
+            {
+               id: Date.now().toString() + "-shared",
+               role: "model",
+               content: `Ini resep yang dibagikan ke kamu!\n\n${recipeBlock}`,
+               timestamp: new Date()
+            }
+        ]);
+        // Remove param from URL
+        window.history.replaceState({}, document.title, "/");
+      } catch (e) {
+        console.error("Failed to parse shared recipe");
+      }
+    }
+  }, []);
+
   // Initial Greet
   useEffect(() => {
     if (messages.length === 0) {
-      setMessages([
-        {
-          id: Date.now().toString(),
-          role: "model",
-          content: "👋 Halo! Gue **PrepMate**, asisten meal prep AI lo.\n\nGue bisa bantu lo:\n🍱 Bikin meal plan mingguan\n📷 Detect bahan dari foto/kulkas dan suggest resep\n🔄 Smart swap kalau bahan habis\n♻️ Selamatkan sisa makanan jadi resep baru\n📊 Track kalori & makro lo\n\nMau mulai dari mana?\n1️⃣ **Bikin meal plan personal**\n2️⃣ **Scan bahan yang ada**\n3️⃣ **Lihat meal prep mingguan**\n\nKetik angkanya atau langsung cerita aja! 😄",
-          timestamp: new Date(),
-        },
-      ]);
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get('sharedRecipe')) {
+        setMessages([
+          {
+            id: Date.now().toString(),
+            role: "model",
+            content: "👋 Halo! Gue **PrepMate**, asisten meal prep AI lo.\n\nGue bisa bantu lo:\n🍱 Bikin meal plan mingguan\n📷 Detect bahan dari foto/kulkas dan suggest resep\n🔄 Smart swap kalau bahan habis\n♻️ Selamatkan sisa makanan jadi resep baru\n📊 Track kalori & makro lo\n\nMau mulai dari mana?\n1️⃣ **Bikin meal plan personal**\n2️⃣ **Scan bahan yang ada**\n3️⃣ **Lihat meal prep mingguan**\n\nKetik angkanya atau langsung cerita aja! 😄",
+            timestamp: new Date(),
+          },
+        ]);
+      }
     }
   }, [messages.length]);
 
@@ -59,10 +136,19 @@ export default function App() {
       return;
     }
 
+    let displayContent = text;
+    if (imageBase64) {
+      if (text === '[ESTIMATE_CALORIES]') {
+         displayContent = '[MENGANALISIS KALORI MAKANAN]';
+      } else if (text === '[SCAN]' || !text) {
+         displayContent = '[MENGANALISIS BAHAN MAKANAN]';
+      }
+    }
+
     const newMessage: ChatMessageData = {
       id: Date.now().toString(),
       role: "user",
-      content: imageBase64 ? (text || "[MENGIRIM FOTO BAHAN MAKANAN]") : text,
+      content: displayContent,
       imageBase64,
       timestamp: new Date(),
     };
@@ -73,8 +159,13 @@ export default function App() {
     setIsLoading(true);
 
     try {
+      let promptText = text;
+      if (imageBase64) {
+        promptText = text === '[ESTIMATE_CALORIES]' ? text : `[SCAN] ${text}`;
+      }
+      
       const responseText = await chatWithPrepMate(
-        imageBase64 ? `[SCAN] ${text}` : text,
+        promptText,
         messages,
         profile,
         imageBase64
@@ -110,6 +201,24 @@ export default function App() {
     }
   };
 
+  // Persist items
+  useEffect(() => {
+    // Optionally persist recipes if they aren't already
+    localStorage.setItem('prepmate_plans', JSON.stringify(savedPlans));
+  }, [savedPlans]);
+
+  // Handle plan saving
+  const handleToggleSavePlan = (plan: any) => {
+    setSavedPlans(prev => {
+      const isSaved = prev.some(p => p.prepDay === plan.prepDay && JSON.stringify(p.schedule) === JSON.stringify(plan.schedule));
+      if (isSaved) {
+        return prev.filter(p => !(p.prepDay === plan.prepDay && JSON.stringify(p.schedule) === JSON.stringify(plan.schedule)));
+      } else {
+        return [plan, ...prev];
+      }
+    });
+  };
+
   const handleToggleSave = (recipe: RecipeData) => {
     setSavedRecipes(prev => {
       const exists = prev.some(r => r.title === recipe.title);
@@ -131,8 +240,8 @@ export default function App() {
   ];
 
   return (
-    <div className="flex justify-center h-screen bg-[#F3F4F6] text-[#1F2937] dark:bg-gray-950 dark:text-gray-100 font-sans p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-6 overflow-hidden transition-colors duration-300">
-      <div className="w-full max-w-[1024px] h-full flex flex-col gap-3 sm:gap-5">
+    <div className="flex justify-center h-[100dvh] bg-[#F3F4F6] text-[#1F2937] dark:bg-gray-950 dark:text-gray-100 font-sans p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-6 overflow-hidden transition-colors duration-300">
+      <div className="w-full max-w-[1024px] h-full flex flex-col gap-3 sm:gap-5 min-w-0">
         
         {/* Header Section */}
         <header className="flex justify-between items-center bg-white dark:bg-gray-900 p-3 sm:p-4 rounded-[24px] shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 transition-colors duration-300">
@@ -154,9 +263,9 @@ export default function App() {
               className="p-2 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl sm:rounded-2xl transition-colors relative border border-gray-100 dark:border-gray-700 shadow-sm bg-white dark:bg-gray-900 shrink-0"
             >
               <Bookmark size={20} className="text-gray-600 dark:text-gray-300 w-5 h-5" />
-              {savedRecipes.length > 0 && (
+              {(savedRecipes.length > 0 || savedPlans.length > 0) && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 text-[9px] font-bold bg-emerald-500 text-white border-2 border-white dark:border-gray-900 rounded-full flex items-center justify-center">
-                  {savedRecipes.length}
+                  {savedRecipes.length + savedPlans.length}
                 </span>
               )}
             </button>
@@ -179,18 +288,31 @@ export default function App() {
         </header>
 
         {/* Main Bento Grid */}
-        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 md:grid-rows-6 gap-3 sm:gap-5 min-h-0">
+        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 md:grid-rows-6 gap-3 sm:gap-5 min-h-0 min-w-0">
           {/* Chat Panel (Large Left) */}
-          <div className="flex-1 lg:col-span-8 md:col-span-7 md:row-span-6 bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden min-h-0 transition-colors duration-300">
+          <div className="flex-1 lg:col-span-8 md:col-span-7 md:row-span-6 bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-3 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden min-h-0 min-w-0 transition-colors duration-300">
             <div className="flex justify-between items-center mb-0 md:mb-4 shrink-0 gap-3 md:gap-0">
               <h2 className="text-lg font-bold hidden md:flex items-center gap-2 text-gray-800 dark:text-gray-100">
                 💬 CHAT & PLANS
               </h2>
-              <div className="w-full md:w-auto flex justify-end mb-2 md:mb-0">
+              <div className="w-full md:w-auto flex justify-end items-center gap-2 mb-2 md:mb-0">
+                {messages.length > 1 && (
+                  <button 
+                    onClick={() => {
+                       if(window.confirm("Apakah kamu yakin ingin menghapus percakapan?")) {
+                          setMessages([messages[0]]);
+                       }
+                    }} 
+                    className="p-1.5 sm:p-2 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors shrink-0"
+                    title="Hapus Percakapan"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
                 <CookingTimer />
               </div>
             </div>
-            <main className="flex-1 overflow-y-auto pr-2 space-y-4 mb-4">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden pr-2 space-y-4 mb-4">
               {!profile && messages.length > 1 && (
                 <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm p-4 rounded-2xl mb-4 font-medium flex items-center gap-3">
                   <span className="text-xl">⚠️</span> 
@@ -204,6 +326,8 @@ export default function App() {
                   message={msg} 
                   onSaveRecipe={handleToggleSave}
                   savedRecipes={savedRecipes}
+                  onSavePlan={handleToggleSavePlan}
+                  savedPlans={savedPlans}
                 />
               ))}
               
@@ -316,9 +440,10 @@ export default function App() {
         {/* Modals */}
         {showCamera && (
           <CameraScanner
-            onCapture={(base64) => {
+            onCapture={(base64, mode) => {
               setShowCamera(false);
-              handleSendMessage(inputValue, base64);
+              const prompt = mode === 'calories' ? "[ESTIMATE_CALORIES]" : "[SCAN]";
+              handleSendMessage(prompt, base64);
             }}
             onClose={() => setShowCamera(false)}
           />
@@ -326,8 +451,10 @@ export default function App() {
         {showSavedModal && (
           <SavedRecipesModal 
             savedRecipes={savedRecipes}
+            savedPlans={savedPlans}
             onClose={() => setShowSavedModal(false)}
             onToggleSave={handleToggleSave}
+            onToggleSavePlan={handleToggleSavePlan}
           />
         )}
         {showProfileModal && (
