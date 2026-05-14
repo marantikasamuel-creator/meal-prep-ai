@@ -11,25 +11,30 @@ interface CameraScannerProps {
 export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'ingredients' | 'calories'>('ingredients');
 
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
   const startCamera = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
+    stopCamera();
 
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: facingMode }
       });
-      setStream(newStream);
+      streamRef.current = newStream;
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
       }
@@ -39,16 +44,14 @@ export function CameraScanner({ onCapture, onClose }: CameraScannerProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [facingMode]);
+  }, [facingMode, stopCamera]);
 
   useEffect(() => {
     startCamera();
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      stopCamera();
     };
-  }, [startCamera]);
+  }, [startCamera, stopCamera]);
 
   const toggleCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');

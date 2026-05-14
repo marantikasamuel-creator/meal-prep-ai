@@ -142,10 +142,10 @@ export function ChatMessage({ message, onSaveRecipe, savedRecipes = [], onSavePl
       )}
       <div
         className={cn(
-          "rounded-[24px] px-3 py-3 sm:px-5 sm:py-4 shadow-sm text-sm sm:text-base selection:bg-emerald-500/30 transition-colors duration-300 min-w-0 w-full",
+          "rounded-[24px] px-3 py-3 sm:px-5 sm:py-4 shadow-sm text-sm sm:text-base selection:bg-emerald-500/30 transition-colors duration-300 min-w-0",
           isUser
-            ? "max-w-[95%] sm:max-w-[80%] bg-emerald-600 text-white rounded-tr-sm"
-            : "max-w-[calc(100%-36px)] sm:max-w-[80%] bg-[#F9FAFB] dark:bg-gray-800 text-gray-800 dark:text-white rounded-tl-sm border border-gray-100 dark:border-gray-700"
+            ? "max-w-[95%] sm:max-w-[85%] bg-emerald-600 text-white rounded-tr-sm"
+            : "w-full max-w-[calc(100%-48px)] sm:max-w-[85%] bg-[#F9FAFB] dark:bg-gray-800 text-gray-800 dark:text-white rounded-tl-sm border border-gray-100 dark:border-gray-700"
         )}
       >
         {isUser ? (

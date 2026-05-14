@@ -241,7 +241,7 @@ export default function App() {
 
   return (
     <div className="flex justify-center h-[100dvh] bg-[#F3F4F6] text-[#1F2937] dark:bg-gray-950 dark:text-gray-100 font-sans p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-6 overflow-hidden transition-colors duration-300">
-      <div className="w-full max-w-[1024px] h-full flex flex-col gap-3 sm:gap-5 min-w-0">
+      <div className="w-full max-w-[1200px] h-full flex flex-col gap-3 sm:gap-5 min-w-0">
         
         {/* Header Section */}
         <header className="flex justify-between items-center bg-white dark:bg-gray-900 p-3 sm:p-4 rounded-[24px] shadow-sm border border-gray-100 dark:border-gray-800 shrink-0 transition-colors duration-300">
@@ -288,9 +288,9 @@ export default function App() {
         </header>
 
         {/* Main Bento Grid */}
-        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 md:grid-rows-6 gap-3 sm:gap-5 min-h-0 min-w-0">
+        <div className="flex-1 flex flex-col md:flex-row md:justify-between gap-3 sm:gap-5 min-h-0 min-w-0">
           {/* Chat Panel (Large Left) */}
-          <div className="flex-1 lg:col-span-8 md:col-span-7 md:row-span-6 bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-3 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden min-h-0 min-w-0 transition-colors duration-300">
+          <div className="flex-1 md:w-[60%] lg:w-[60%] bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-3 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden min-h-0 min-w-0 transition-colors duration-300">
             <div className="flex justify-between items-center mb-0 md:mb-4 shrink-0 gap-3 md:gap-0">
               <h2 className="text-lg font-bold hidden md:flex items-center gap-2 text-gray-800 dark:text-gray-100">
                 💬 CHAT & PLANS
@@ -404,7 +404,7 @@ export default function App() {
           </div>
 
           {/* Quick Actions (Right Panel - Desktop) */}
-          <div className="hidden md:flex lg:col-span-4 md:col-span-5 md:row-span-6 bg-white dark:bg-[#111827] rounded-[32px] p-6 shadow-sm dark:shadow-xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white flex-col overflow-hidden relative transition-colors duration-300">
+          <div className="hidden md:flex flex-1 md:w-[38%] lg:w-[38%] bg-white dark:bg-[#111827] rounded-[32px] p-6 shadow-sm dark:shadow-xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white flex-col overflow-hidden relative transition-colors duration-300">
             <div className="absolute top-0 right-0 p-3 opacity-10">
                <Sparkles size={80} />
             </div>
@@ -423,7 +423,7 @@ export default function App() {
                         handleSendMessage(action.command);
                       }
                     }}
-                    className="flex text-left items-center justify-between px-4 py-3.5 bg-[#F9FAFB] dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-all group shadow-sm"
+                    className="w-full flex text-left items-center justify-between px-4 py-3.5 bg-[#F9FAFB] dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-all group shadow-sm shrink-0"
                   >
                       <span className="flex items-center gap-3">
                         <ActionIcon size={18} className={needsInput ? "text-emerald-500 dark:text-emerald-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-300" : "text-orange-500 dark:text-orange-400 group-hover:text-orange-600 dark:group-hover:text-orange-300"} />
