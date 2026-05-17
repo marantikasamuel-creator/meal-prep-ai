@@ -120,8 +120,24 @@ export async function chatWithPrepMate(
     });
 
     return response.text || "Maaf, sistem sedang sibuk. Coba lagi ya!";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error("Gagal menghubungi NutriMind AI.");
+    
+    let errorMessage = "Aduh, gue lagi ada kendala teknis nih. Coba lagi ya!";
+    
+    if (error && error.message) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("api key") || msg.includes("unauthenticated") || msg.includes("forbidden")) {
+         errorMessage = "Gue gak bisa connect karena ada masalah dengan API Key. Cek pengaturan API Key lo ya!";
+      } else if (msg.includes("fetch failed") || msg.includes("network") || msg.includes("timeout")) {
+         errorMessage = "Koneksi internet bermasalah atau panggil server gagal. Cek koneksi internet lo sebentar ya!";
+      } else if (msg.includes("429") || msg.includes("quota") || msg.includes("rate limit")) {
+         errorMessage = "Waduh, sistem lagi rame banget nih. Coba lagi beberapa detik lagi ya!";
+      } else if (msg.includes("500") || msg.includes("503") || msg.includes("server error")) {
+         errorMessage = "Server lagi down atau ada gangguan teknis. Mohon bersabar dan coba lagi nanti ya!";
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
 }

@@ -17,6 +17,21 @@ export interface WeeklyPlanData {
   }[];
 }
 
+const formatItemName = (name: string) => {
+  let summarized = name;
+  if (summarized.includes('/')) {
+    const parts = summarized.split('/');
+    summarized = parts[0];
+  } else if (summarized.toLowerCase().includes(' atau ')) {
+    const parts = summarized.toLowerCase().split(' atau ');
+    summarized = parts[0];
+  } else if (summarized.toLowerCase().includes(' or ')) {
+    const parts = summarized.toLowerCase().split(' or ');
+    summarized = parts[0];
+  }
+  return summarized.trim();
+};
+
 export function WeeklyPlanCard({ plan, isSaved = false, onToggleSave }: { plan: WeeklyPlanData; isSaved?: boolean; onToggleSave?: () => void }) {
   const [activeDayIdx, setActiveDayIdx] = useState(0);
   const [showShoppingList, setShowShoppingList] = useState(false);
@@ -156,48 +171,52 @@ export function WeeklyPlanCard({ plan, isSaved = false, onToggleSave }: { plan: 
                 className="w-full"
                 style={{ width: '100%', overflow: 'hidden' }}
               >
-                <div 
-                  className="mt-3 bg-white dark:bg-gray-900 rounded-2xl border border-stone-100 dark:border-gray-800 divide-y divide-stone-100 dark:divide-gray-800"
-                  style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-                >
-                  {plan.shoppingList.map((item, i) => (
-                    <div 
-                      key={i} 
-                      className="group transition-colors cursor-pointer hover:bg-stone-50 dark:hover:bg-gray-800/50"
-                      onClick={(e) => { e.preventDefault(); toggleItem(i); }}
-                      style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', width: '100%' }}
-                    >
-                      <div 
-                        className={cn(
-                          "rounded-full border-2 flex items-center justify-center transition-colors",
-                          checkedItems[i] 
-                            ? "bg-emerald-500 border-emerald-500 text-white" 
-                            : "border-stone-300 dark:border-gray-600 text-transparent group-hover:border-emerald-500"
-                        )}
-                        style={{ flex: '0 0 32px', width: '32px', height: '32px' }}
-                      >
-                        <Check size={16} className={cn("transition-opacity", checkedItems[i] ? "opacity-100" : "opacity-0")} />
-                      </div>
-                      
-                      <div style={{ flex: 1, minWidth: 0, wordBreak: 'normal', overflowWrap: 'break-word', whiteSpace: 'normal' }} className="pt-1">
-                        <div className={cn("text-[13px] sm:text-sm font-bold transition-colors leading-snug block", checkedItems[i] ? "text-stone-400 dark:text-gray-600 line-through" : "text-stone-800 dark:text-gray-200")}>{item.item}</div>
-                        <div className={cn("text-[10px] font-bold uppercase tracking-[0.15em] mt-1 block", checkedItems[i] ? "text-stone-400 dark:text-gray-600" : "text-emerald-600 dark:text-emerald-500")}>{item.category}</div>
-                      </div>
+                      <div className="flex bg-white dark:bg-gray-900 rounded-2xl border border-stone-100 dark:border-gray-800 divide-y divide-stone-100 dark:divide-gray-800 flex-col overflow-hidden w-full mt-3">
+                        {plan.shoppingList.map((item, i) => (
+                          <div 
+                            key={i} 
+                            className="group transition-colors cursor-pointer hover:bg-stone-50 dark:hover:bg-gray-800/50 flex-1 flex items-center p-3 sm:p-4 gap-3 w-full border-b sm:border-b-0 border-stone-100 dark:border-gray-800 last:border-0"
+                            onClick={(e) => { e.preventDefault(); toggleItem(i); }}
+                          >
+                            <div 
+                              className={cn(
+                                "shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-colors",
+                                checkedItems[i] 
+                                  ? "bg-emerald-500 border-emerald-500 text-white" 
+                                  : "border-stone-300 dark:border-gray-600 text-transparent group-hover:border-emerald-500"
+                              )}
+                            >
+                              <Check size={12} className={cn("transition-opacity", checkedItems[i] ? "opacity-100" : "opacity-0")} />
+                            </div>
+                            
+                            <div className="flex-1 min-w-0 pr-1">
+                              <div className={cn(
+                                "text-[13px] sm:text-sm font-bold transition-colors leading-tight break-words", 
+                                checkedItems[i] ? "text-stone-400 dark:text-gray-600 line-through" : "text-stone-800 dark:text-gray-200"
+                              )} title={item.item}>
+                                {formatItemName(item.item)}
+                              </div>
+                              <div className={cn(
+                                "text-[9px] sm:text-[10px] font-bold uppercase tracking-wider mt-0.5 break-words", 
+                                checkedItems[i] ? "text-stone-400 dark:text-gray-600" : "text-emerald-600 dark:text-emerald-500"
+                              )}>
+                                {item.category}
+                              </div>
+                            </div>
 
-                      <div 
-                        className={cn(
-                          "font-bold transition-colors mt-0.5 text-center leading-tight",
-                          checkedItems[i]
-                            ? "bg-stone-100 dark:bg-gray-800 text-stone-400 dark:text-gray-500"
-                            : "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30"
-                        )}
-                        style={{ flex: '0 1 auto', maxWidth: '45%', wordBreak: 'break-word', padding: '6px 10px', borderRadius: '16px', fontSize: '12px' }}
-                      >
-                        {item.amount}
+                            <div className="shrink-0 flex items-center justify-end max-w-[35%] sm:max-w-[40%] pl-1">
+                              <span className={cn(
+                                "inline-block text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-full text-center transition-colors min-w-fit break-words",
+                                checkedItems[i] 
+                                  ? "bg-stone-100 dark:bg-gray-800 text-stone-400 dark:text-gray-500" 
+                                  : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400"
+                              )}>
+                                {item.amount}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
               </motion.div>
             )}
           </AnimatePresence>

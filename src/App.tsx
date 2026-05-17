@@ -181,12 +181,13 @@ export default function App() {
       ]);
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error && error.message ? error.message : "Aduh, gue lagi ada kendala teknis nih. Coba lagi ya!";
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: "model",
-          content: "Aduh, gue lagi ada kendala teknis nih. Coba lagi ya!",
+          content: errorMessage,
           timestamp: new Date(),
         },
       ]);
