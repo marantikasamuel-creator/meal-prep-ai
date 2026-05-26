@@ -42,7 +42,7 @@ export function RecipeCard({ recipe, isSaved = false, onToggleSave }: { recipe: 
 
   const handleShare = async () => {
     const recipeObject = { type: 'recipe', data: recipe };
-    const url = new URL(window.location.href);
+    const url = new URL(window.location.origin + window.location.pathname);
     url.searchParams.set('sharedRecipe', btoa(encodeURIComponent(JSON.stringify(recipeObject))));
     const shareUrl = url.toString();
 
@@ -54,7 +54,10 @@ export function RecipeCard({ recipe, isSaved = false, onToggleSave }: { recipe: 
           url: shareUrl,
         });
       } catch (err) {
-        // user cancelled or error
+        // Fallback to clipboard if share fails (e.g. in iframe without permission)
+        navigator.clipboard.writeText(shareUrl);
+        setCopiedShare(true);
+        setTimeout(() => setCopiedShare(false), 2000);
       }
     } else {
       navigator.clipboard.writeText(shareUrl);

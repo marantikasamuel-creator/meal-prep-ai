@@ -22,6 +22,7 @@ export default function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showMoodModal, setShowMoodModal] = useState(false);
   const [savedRecipes, setSavedRecipes] = useState<RecipeData[]>([]);
   const [savedPlans, setSavedPlans] = useState<any[]>(() => {
     try {
@@ -233,11 +234,9 @@ export default function App() {
   const quickActions = [
     { label: "Daily Plan", command: "[DAILY_PLAN] Bikin meal plan hari ini dong", icon: Salad, matchText: "1" },
     { label: "Easy Recipes", command: "[RECIPES] Minta resep yang easy (gampang dibuat)", icon: ChefHat },
-    { label: "Scan Fridge", command: "[SCAN] ", icon: Scan, matchText: "2" },
     { label: "Weekly Prep", command: "[WEEKLY_PLAN] Bikin meal plan seminggu ya", icon: Calendar, matchText: "3" },
     { label: "Leftover", command: "[LEFTOVER] ", icon: Recycle },
-    { label: "Mood", command: "[MOOD] capek banget pengen makan enak", icon: Frown },
-    { label: "Swap", command: "[SWAP] ", icon: Sparkles },
+    { label: "Mood", command: "MOOD_TRIGGER", icon: Frown },
   ];
 
   return (
@@ -290,9 +289,45 @@ export default function App() {
 
         {/* Main Bento Grid */}
         <div className="flex-1 flex flex-col md:flex-row md:justify-between gap-3 sm:gap-5 min-h-0 min-w-0">
-          {/* Chat Panel (Large Left) */}
-          <div className="flex-1 md:w-[60%] lg:w-[60%] bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-3 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden min-h-0 min-w-0 transition-colors duration-300">
-            <div className="flex justify-between items-center mb-0 md:mb-4 shrink-0 gap-3 md:gap-0">
+          
+          {/* Quick Actions (Left Panel - Desktop) */}
+          <div className="hidden md:flex md:w-64 lg:w-80 bg-white dark:bg-[#111827] rounded-[32px] p-6 shadow-sm dark:shadow-xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white flex-col overflow-hidden relative transition-colors duration-300 resize-none shrink-0">
+            <div className="absolute top-0 right-0 p-3 opacity-10">
+               <Sparkles size={80} />
+            </div>
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 z-10">⚡ QUICK ACTIONS</h2>
+            <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 z-10 no-scrollbar">
+              {quickActions.map((action, idx) => {
+                const ActionIcon = action.icon;
+                const needsInput = action.command.endsWith(" ");
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      if (action.command === "MOOD_TRIGGER") {
+                        setShowMoodModal(true);
+                      } else if (needsInput) {
+                        setInputValue(action.command);
+                      } else {
+                        handleSendMessage(action.command);
+                      }
+                    }}
+                    className="w-full flex text-left items-center justify-between px-4 py-3.5 bg-[#F9FAFB] dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-all group shadow-sm shrink-0"
+                  >
+                      <span className="flex items-center gap-3">
+                        <ActionIcon size={18} className={needsInput ? "text-emerald-500 dark:text-emerald-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-300" : "text-orange-500 dark:text-orange-400 group-hover:text-orange-600 dark:group-hover:text-orange-300"} />
+                        {action.label}
+                      </span>
+                      <span className="text-gray-500 group-hover:text-gray-400">→</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Chat Panel (Right Panel) */}
+          <div className="flex-1 bg-white dark:bg-gray-900 rounded-[24px] sm:rounded-[32px] p-3 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden min-h-0 min-w-0 transition-colors duration-300">
+            <div className="flex justify-between items-center mb-0 md:mb-4 shrink-0 gap-3 md:gap-0 max-w-3xl w-full mx-auto">
               <h2 className="text-lg font-bold hidden md:flex items-center gap-2 text-gray-800 dark:text-gray-100">
                 💬 CHAT & PLANS
               </h2>
@@ -313,8 +348,9 @@ export default function App() {
                 <CookingTimer />
               </div>
             </div>
-            <main className="flex-1 overflow-y-auto overflow-x-hidden pr-2 space-y-4 mb-4">
-              {!profile && messages.length > 1 && (
+            <main className="flex-1 overflow-y-auto overflow-x-hidden pr-2 mb-4">
+              <div className="max-w-3xl w-full mx-auto space-y-4">
+                {!profile && messages.length > 1 && (
                 <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm p-4 rounded-2xl mb-4 font-medium flex items-center gap-3">
                   <span className="text-xl">⚠️</span> 
                   Kamu belum set profile! Klik icon settings di kanan atas biar rekomendasi gue lebih akurat ya.
@@ -341,11 +377,12 @@ export default function App() {
                   </div>
                 </div>
               )}
-              <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} />
+              </div>
             </main>
 
             {/* Mobile Quick Actions */}
-            <div className="relative flex md:hidden shrink-0 mt-1 mb-2 w-full">
+            <div className="relative flex md:hidden shrink-0 mt-1 mb-2 w-full max-w-3xl mx-auto">
               <div className="flex flex-1 overflow-x-auto gap-2 pb-1 pr-8 no-scrollbar relative z-10 w-full">
                 {quickActions.map((action, idx) => {
                   const ActionIcon = action.icon;
@@ -354,7 +391,9 @@ export default function App() {
                     <button
                       key={idx}
                       onClick={() => {
-                        if (needsInput) {
+                        if (action.command === "MOOD_TRIGGER") {
+                          setShowMoodModal(true);
+                        } else if (needsInput) {
                           setInputValue(action.command);
                         } else {
                           handleSendMessage(action.command);
@@ -373,7 +412,7 @@ export default function App() {
             </div>
 
             {/* Chat Input */}
-            <div className="shrink-0 flex gap-2 sm:gap-3 items-end">
+            <div className="shrink-0 flex gap-2 sm:gap-3 items-end w-full max-w-3xl mx-auto">
               <button
                 onClick={() => setShowCamera(true)}
                 className="shrink-0 aspect-square w-[56px] h-[56px] bg-stone-50 dark:bg-gray-800 hover:bg-stone-100 dark:hover:bg-gray-700 text-stone-600 dark:text-gray-300 rounded-[20px] transition-all flex items-center justify-center border border-gray-100 dark:border-gray-700 shadow-sm active:scale-95"
@@ -403,39 +442,6 @@ export default function App() {
               </button>
             </div>
           </div>
-
-          {/* Quick Actions (Right Panel - Desktop) */}
-          <div className="hidden md:flex flex-1 md:w-[38%] lg:w-[38%] bg-white dark:bg-[#111827] rounded-[32px] p-6 shadow-sm dark:shadow-xl border border-gray-100 dark:border-gray-800 text-gray-900 dark:text-white flex-col overflow-hidden relative transition-colors duration-300">
-            <div className="absolute top-0 right-0 p-3 opacity-10">
-               <Sparkles size={80} />
-            </div>
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 z-10">⚡ QUICK ACTIONS</h2>
-            <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 z-10">
-              {quickActions.map((action, idx) => {
-                const ActionIcon = action.icon;
-                const needsInput = action.command.endsWith(" ");
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      if (needsInput) {
-                        setInputValue(action.command);
-                      } else {
-                        handleSendMessage(action.command);
-                      }
-                    }}
-                    className="w-full flex text-left items-center justify-between px-4 py-3.5 bg-[#F9FAFB] dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600 transition-all group shadow-sm shrink-0"
-                  >
-                      <span className="flex items-center gap-3">
-                        <ActionIcon size={18} className={needsInput ? "text-emerald-500 dark:text-emerald-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-300" : "text-orange-500 dark:text-orange-400 group-hover:text-orange-600 dark:group-hover:text-orange-300"} />
-                        {action.label}
-                      </span>
-                      <span className="text-gray-500 group-hover:text-gray-400">→</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
         </div>
 
         {/* Modals */}
@@ -448,6 +454,40 @@ export default function App() {
             }}
             onClose={() => setShowCamera(false)}
           />
+        )}
+        {showMoodModal && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-md p-6 shadow-2xl">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4 text-center">Gimana mood lo hari ini?</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { emoji: "😄", label: "Senang", command: "[MOOD] lagi seneng nih, mau makan enak!" },
+                  { emoji: "😭", label: "Sedih", command: "[MOOD] lagi sedih, butuh comfort food" },
+                  { emoji: "😡", label: "Marah", command: "[MOOD] lagi marah, butuh makanan pedas/gurih buat pelampiasan" },
+                  { emoji: "😴", label: "Capek", command: "[MOOD] capek banget, mau yang gampang dan cepet aja" },
+                  { emoji: "🤒", label: "Sakit", command: "[MOOD] lagi kurang bertenaga, butuh yang berkuah dan anget" }
+                ].map((mood, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                        setShowMoodModal(false);
+                        handleSendMessage(mood.command);
+                    }}
+                    className={`flex flex-col items-center justify-center p-4 rounded-2xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-700/50 gap-2 ${i === 4 ? 'col-span-2' : ''}`}
+                  >
+                    <span className="text-3xl">{mood.emoji}</span>
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{mood.label}</span>
+                  </button>
+                ))}
+              </div>
+              <button 
+                onClick={() => setShowMoodModal(false)}
+                className="mt-4 w-full py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
         )}
         {showSavedModal && (
           <SavedRecipesModal 
